@@ -1,19 +1,33 @@
 import puppeteer from "puppeteer";
+import {LoginCardInfo} from "./LoginCardInfo";
+import {CardUsageStats} from "./CardUsageStats";
 
 export class Crawler {
+    private static readonly LOGIN_PATH = '/login.action';
     private readonly baseUrl: string;
-    private browser: puppeteer.Browser | null = null;
+    private readonly browser: puppeteer.Browser;
 
-    private constructor(baseUrl : string) {
+    constructor(browser: puppeteer.Browser, baseUrl: string) {
+        this.browser = browser;
         this.baseUrl = baseUrl;
     }
 
-    private async launchBrowser() {
-        this.browser = await puppeteer.launch();
+    async getCardUsageStats(loginCardInfo: LoginCardInfo): Promise<CaptchaInterruption> {
+        const page = await this.browser.newPage();
+        await page.goto(this.baseUrl + Crawler.LOGIN_PATH);
+        throw new Error("TODO");
+    }
+}
+
+export type CaptchaContinuationFunc = (answer: string) => CardUsageStats;
+
+export class CaptchaInterruption {
+    private readonly captchaImage: string;
+    private readonly continueFunc: CaptchaContinuationFunc;
+
+    constructor(captchaImage: string, continueFunc: CaptchaContinuationFunc) {
+        this.captchaImage = captchaImage;
+        this.continueFunc = continueFunc;
     }
 
-    static async launch(baseUrl : string) {
-        const instance = new Crawler(baseUrl);
-        await instance.launchBrowser();
-    }
 }

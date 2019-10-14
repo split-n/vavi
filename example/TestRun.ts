@@ -1,4 +1,5 @@
 import * as vavi from "../lib";
+import util from "util";
 import readline from 'readline';
 
 async function main() {
@@ -16,9 +17,12 @@ async function main() {
         terminal: false
     });
 
-    rl.on('line', async function(line){
-        await captcha.continueFunc(line);
+    rl.on('line', async function (line) {
+        const result = await captcha.continueFunc(line);
         rl.close();
+
+        console.log(util.inspect(result));
     })
 }
+
 main();

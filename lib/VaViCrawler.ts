@@ -1,6 +1,6 @@
-import puppeteer from "puppeteer";
+import puppeteer, {ElementHandle, Page} from "puppeteer";
 import {LoginCardInfo} from "./LoginCardInfo";
-import {CardUsageStats} from "./CardUsageStats";
+import {CardUsageDetails, CardUsageStats} from "./CardUsageStats";
 
 export class VaViCrawler {
     private static readonly LOGIN_PATH = '/login.action';
@@ -39,12 +39,50 @@ export class VaViCrawler {
                 })
             ]);
 
-            if(page.url().includes(VaViCrawler.LOGIN_PATH)) {
+            // if still has input, then failed to login.
+            if ((await page.$('#txtCustomerNumber2'))) {
                 throw new Error() //TODO impl captcha retry
             } else {
-                return new CardUsageStats();
+                return this.parseStats(page);
             }
         });
+    }
+
+    private async parseStats(page: Page): Promise<CardUsageStats> {
+        const balanceText = await (await (await page.$('#result_balance > .money'))!
+            .getProperty('textContent')).jsonValue();
+        const balanceResult = parseInt(balanceText.replace(/[,円]/g, ""));
+
+        // domestic use detail row in JPY: <td>
+        // foreign use detail row in JPY: <td class="border1">
+        // foreign use detail row in original price with exchange rate: <td class="childborder1 hidden detailsToggle">
+        // only pick normal detail row (includes foreign use price in JPY).
+        const detailRows = (await page.$$('#result_hisTable > table > tbody > tr:not(.hidden)'));
+        const details = await Promise.all(detailRows.map(async row => await this.parseRow(row)));
+
+        return new CardUsageStats(balanceResult, details);
+
+    }
+
+    private async parseRow(row: ElementHandle): Promise<CardUsageDetails> {
+        const cols = await row.$$('td');
+
+        const dateValue: string = await (await cols[0].getProperty('textContent')).jsonValue();
+        const dateSplit = dateValue.split('/').map(s => parseInt(s));
+        const date = new Date(0, dateSplit[0], dateSplit[1]);
+
+        const merchantValue: string = await (await cols[1].getProperty('textContent')).jsonValue();
+        const merchant: string = merchantValue.trim();
+        const isInProcess = merchant.startsWith("*");
+
+        const isForeignUseValue: string = await (await cols[2].getProperty('textContent')).jsonValue();
+        const isForeignUse = isForeignUseValue.includes('▼');
+
+        const priceValue: string = await (await cols[3].getProperty('textContent')).jsonValue();
+        const price = parseInt(priceValue.replace(',', ''));
+
+        return new CardUsageDetails(date,
+            isInProcess, merchant, isForeignUse, price);
     }
 }
 

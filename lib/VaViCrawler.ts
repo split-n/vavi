@@ -53,15 +53,31 @@ export class VaViCrawler {
             .getProperty('textContent')).jsonValue();
         const balanceResult = parseInt(balanceText.replace(/[,円]/g, ""));
 
+        const details: CardUsageDetails[] = [];
+
+        while (true) {
+            details.push(...(await this.parseDetailsInPage(page)));
+            const activeNextButton = await page.$('#pageNavi .btn_nextP > a');
+            if (activeNextButton) {
+                await Promise.all([
+                    page.waitForNavigation(),
+                    activeNextButton.click()
+                ]);
+            } else {
+                break;
+            }
+        }
+
+        return new CardUsageStats(balanceResult, details);
+    }
+
+    private async parseDetailsInPage(page: Page): Promise<CardUsageDetails[]> {
         // domestic use detail row in JPY: <td>
         // foreign use detail row in JPY: <td class="border1">
         // foreign use detail row in original price with exchange rate: <td class="childborder1 hidden detailsToggle">
         // only pick normal detail row (includes foreign use price in JPY).
         const detailRows = (await page.$$('#result_hisTable > table > tbody > tr:not(.hidden)'));
-        const details = await Promise.all(detailRows.map(async row => await this.parseRow(row)));
-
-        return new CardUsageStats(balanceResult, details);
-
+        return await Promise.all(detailRows.map(async row => await this.parseRow(row)));
     }
 
     private async parseRow(row: ElementHandle): Promise<CardUsageDetails> {

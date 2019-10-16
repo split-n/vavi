@@ -2,24 +2,36 @@ import puppeteer, {ElementHandle, Page} from "puppeteer";
 import {LoginCardInfo} from "./LoginCardInfo";
 import {CardUsageDetails, CardUsageStats} from "./CardUsageStats";
 
+/**
+ * Vanilla visa site crawler
+ */
 export class VaViCrawler {
     private static readonly LOGIN_PATH = '/login.action';
     private readonly baseUrl: string;
     private readonly browser: puppeteer.Browser;
 
+    /**
+     * @param browser browser
+     * @param baseUrl vanilla visa site protocol + host
+     */
     constructor(browser: puppeteer.Browser, baseUrl: string) {
         this.browser = browser;
         this.baseUrl = baseUrl;
     }
 
+    /**
+     * Crawl usage stats.
+     * @param loginCardInfo login information
+     */
     async getCardUsageStats(loginCardInfo: LoginCardInfo): Promise<CaptchaInterruption> {
         const page = await this.browser.newPage();
         await Promise.all([
             page.waitForNavigation(),
             page.goto(this.baseUrl + VaViCrawler.LOGIN_PATH)
         ]);
-
         await page.waitForSelector('#certificationImg:not([src=""])');
+
+        // input login info
         await (await page.$('#txtCustomerNumber2'))!.type(loginCardInfo.inquiryNumber2!);
         await (await page.$('#txtCustomerNumber3'))!.type(loginCardInfo.inquiryNumber3!);
         await (await page.$('#txtCustomerNumber4'))!.type(loginCardInfo.inquiryNumber4!);
@@ -27,6 +39,7 @@ export class VaViCrawler {
 
         // TODO: Captcha image to dataURL
 
+        // returning captcha image and continue function.
         return new CaptchaInterruption('', async (answer: string) => {
             await (await page.$('#txtSecurityChkCode'))!.type(answer);
             await Promise.all([
@@ -39,7 +52,7 @@ export class VaViCrawler {
                 })
             ]);
 
-            // if still has input, then failed to login.
+            // if still has input, then maybe failed to login.
             if ((await page.$('#txtCustomerNumber2'))) {
                 throw new Error() //TODO impl captcha retry
             } else {
@@ -48,6 +61,10 @@ export class VaViCrawler {
         });
     }
 
+    /**
+     * parse stats from loaded page.
+     * @param page
+     */
     private async parseStats(page: Page): Promise<CardUsageStats> {
         const balanceText = await (await (await page.$('#result_balance > .money'))!
             .getProperty('textContent')).jsonValue();
@@ -55,6 +72,7 @@ export class VaViCrawler {
 
         const details: CardUsageDetails[] = [];
 
+        // crawl details from all page
         while (true) {
             details.push(...(await this.parseDetailsInPage(page)));
             const activeNextButton = await page.$('#pageNavi .btn_nextP > a');
@@ -68,9 +86,15 @@ export class VaViCrawler {
             }
         }
 
+        // TODO: set year to date
+
         return new CardUsageStats(balanceResult, details);
     }
 
+    /**
+     * parse detail items in the page.
+     * @param page
+     */
     private async parseDetailsInPage(page: Page): Promise<CardUsageDetails[]> {
         // domestic use detail row in JPY: <td>
         // foreign use detail row in JPY: <td class="border1">
@@ -80,6 +104,10 @@ export class VaViCrawler {
         return await Promise.all(detailRows.map(async row => await this.parseRow(row)));
     }
 
+    /**
+     * parse detail row.
+     * @param row
+     */
     private async parseRow(row: ElementHandle): Promise<CardUsageDetails> {
         const cols = await row.$$('td');
 
@@ -102,8 +130,12 @@ export class VaViCrawler {
     }
 }
 
+// param: captcha answer, return value: usage stats or captcha retry
 export type CaptchaContinuationFunc = (answer: string) => Promise<CardUsageStats | CaptchaInterruption>;
 
+/**
+ * Request to input captcha and continue.
+ */
 export class CaptchaInterruption {
     public readonly captchaImage: string;
     public readonly continueFunc: CaptchaContinuationFunc;

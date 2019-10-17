@@ -37,10 +37,18 @@ export class VaViCrawler {
         await (await page.$('#txtCustomerNumber4'))!.type(loginCardInfo.inquiryNumber4!);
         await (await page.$('#txtSecurityCode'))!.type(loginCardInfo.securityCode!);
 
-        // TODO: Captcha image to dataURL
+        // Get captcha image as dataURL
+        const captchaDataUrl = await page.evaluate(() => {
+            const img = document.querySelector('#certificationImg') as HTMLImageElement;
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            canvas.getContext('2d')!.drawImage(img, 0, 0);
+            return canvas.toDataURL('image/png');
+        });
 
         // returning captcha image and continue function.
-        return new CaptchaInterruption('', async (answer: string) => {
+        return new CaptchaInterruption(captchaDataUrl, async (answer: string) => {
             await (await page.$('#txtSecurityChkCode'))!.type(answer);
             await Promise.all([
                 page.waitForNavigation(),

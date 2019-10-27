@@ -37,36 +37,42 @@ export class VaViCrawler {
         await (await page.$('#txtCustomerNumber4'))!.type(loginCardInfo.inquiryNumber4!);
         await (await page.$('#txtSecurityCode'))!.type(loginCardInfo.securityCode!);
 
-        // Get captcha image as dataURL
-        const captchaDataUrl = await page.evaluate(() => {
-            const img = document.querySelector('#certificationImg') as HTMLImageElement;
-            const canvas = document.createElement('canvas');
-            canvas.width = img.naturalWidth;
-            canvas.height = img.naturalHeight;
-            canvas.getContext('2d')!.drawImage(img, 0, 0);
-            return canvas.toDataURL('image/png');
-        });
+        // the function to request captcha input, then try login.
+        // if succeed, return data, else retry same thing.
+        const captchaAndSubmitFunc: () => Promise<CaptchaInterruption> = async () => {
+            // Get captcha image as dataURL
+            const captchaDataUrl = await page.evaluate(() => {
+                const img = document.querySelector('#certificationImg') as HTMLImageElement;
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                canvas.getContext('2d')!.drawImage(img, 0, 0);
+                return canvas.toDataURL('image/png');
+            });
 
-        // returning captcha image and continue function.
-        return new CaptchaInterruption(captchaDataUrl, async (answer: string) => {
-            await (await page.$('#txtSecurityChkCode'))!.type(answer);
-            await Promise.all([
-                page.waitForNavigation(),
-                // use evaluate because page.click not working
-                // https://github.com/GoogleChrome/puppeteer/issues/3347
-                page.evaluate(() => {
-                    // @ts-ignore
-                    document.querySelector('.ma_btn_submit > input').click();
-                })
-            ]);
+            // returning captcha image and continue function.
+            return new CaptchaInterruption(captchaDataUrl, async (answer: string) => {
+                await (await page.$('#txtSecurityChkCode'))!.type(answer);
+                await Promise.all([
+                    page.waitForNavigation(),
+                    // use evaluate because page.click not working
+                    // https://github.com/GoogleChrome/puppeteer/issues/3347
+                    page.evaluate(() => {
+                        // @ts-ignore
+                        document.querySelector('.ma_btn_submit > input').click();
+                    })
+                ]);
 
-            // if still has input, then maybe failed to login.
-            if ((await page.$('#txtCustomerNumber2'))) {
-                throw new Error() //TODO impl captcha retry
-            } else {
-                return this.parseStats(page);
-            }
-        });
+                // if still has input, then maybe failed to login.
+                if ((await page.$('#txtCustomerNumber2'))) {
+                    return captchaAndSubmitFunc();
+                } else {
+                    return this.parseStats(page);
+                }
+            });
+        };
+
+        return captchaAndSubmitFunc();
     }
 
     /**

@@ -1,6 +1,19 @@
 import * as vavi from "../lib";
 import util from "util";
 import readline from 'readline';
+import {CaptchaInterruption} from "../lib/VaViCrawler";
+
+async function* getAsyncReadlineIter() : AsyncIterableIterator<string> {
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+        terminal: false
+    });
+
+    for await (const line of rl) {
+        yield line;
+    }
+}
 
 async function main() {
     const crawler = await vavi.launch({headless: false});
@@ -9,20 +22,25 @@ async function main() {
         inquiryNumber2 : '', inquiryNumber3 : '', inquiryNumber4 : '', securityCode : ''
     };
 
-    const captcha = await crawler.getCardUsageStats(loginCardInfo);
-    process.stdout.write("Please input captcha.\n> ");
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-        terminal: false
-    });
+    let captcha = await crawler.getCardUsageStats(loginCardInfo);
+    const readlineIter = getAsyncReadlineIter();
+    while(true) {
+        process.stdout.write('captcha dataURL: ' + captcha.captchaImage + "\n");
+        process.stdout.write("Please input captcha.\n> ");
 
-    rl.on('line', async function (line) {
-        const result = await captcha.continueFunc(line);
-        rl.close();
+        const inputData = await readlineIter.next();
+        if(inputData.done) {
+            break;
+        }
 
+        const result = await captcha.continueFunc(inputData.value);
         console.log(util.inspect(result));
-    })
+        if(result instanceof CaptchaInterruption) {
+            captcha = result;
+        } else {
+            break;
+        }
+    }
 }
 
 main();

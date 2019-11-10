@@ -29,7 +29,13 @@ export class VaViCrawler {
             page.waitForNavigation(),
             page.goto(this.baseUrl + VaViCrawler.LOGIN_PATH)
         ]);
-        await page.waitForSelector('#certificationImg:not([src=""])');
+
+        const waitCaptchaImageFunc = () => {
+            const img = document.querySelector('#certificationImg') as HTMLImageElement;
+            return img && img.getAttribute('src') !== '' && img.complete;
+        };
+
+        await page.waitForFunction(waitCaptchaImageFunc);
 
         // input login info
         await (await page.$('#txtCustomerNumber2'))!.type(loginCardInfo.inquiryNumber2!);
@@ -65,6 +71,7 @@ export class VaViCrawler {
 
                 // if still has input, then maybe failed to login.
                 if ((await page.$('#txtCustomerNumber2'))) {
+                    await page.waitForFunction(waitCaptchaImageFunc);
                     return captchaAndSubmitFunc();
                 } else {
                     return this.parseStats(page);

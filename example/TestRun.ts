@@ -1,7 +1,6 @@
 import * as vavi from "../lib";
 import util from "util";
 import readline from 'readline';
-import {CaptchaInterruption} from "../lib/VaViCrawler";
 
 async function* getAsyncReadlineIter() : AsyncIterableIterator<string> {
     const rl = readline.createInterface({
@@ -35,7 +34,7 @@ async function main() {
 
         const result = await captcha.continueFunc(inputData.value);
         console.log(util.inspect(result));
-        if(result instanceof CaptchaInterruption) {
+        if(result instanceof vavi.CaptchaInterruption) {
             captcha = result;
         } else {
             break;

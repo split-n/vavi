@@ -1,5 +1,6 @@
 export {LoginCardInfo} from "./LoginCardInfo";
-export {CardUsageStats} from "./CardUsageStats"
+export {CardUsageStats} from "./CardUsageStats";
+export {VaViCrawler, CaptchaInterruption, CaptchaContinuationFunc} from "./VaViCrawler";
 
 import {VaViCrawler} from "./VaViCrawler";
 import puppeteer, {LaunchOptions} from "puppeteer";

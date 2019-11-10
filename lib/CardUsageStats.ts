@@ -1,10 +1,12 @@
 export class CardUsageStats {
     balance: number;
     usageDetails: CardUsageDetails[];
+    isNetUseEnabled: boolean;
 
-    constructor(balance: number, usageDetails: CardUsageDetails[]) {
+    constructor(balance: number, usageDetails: CardUsageDetails[], isNetUseEnabled: boolean) {
         this.usageDetails = usageDetails;
         this.balance = balance;
+        this.isNetUseEnabled = isNetUseEnabled;
     }
 }
 

@@ -87,6 +87,12 @@ export class VaViCrawler {
      * @param page
      */
     private async parseStats(page: Page): Promise<CardUsageStats> {
+        const cardImgSrc = await (await (await page.$('img.card'))!
+            .getProperty('src')).jsonValue() as string;
+        // giftCard_history_finish01.png -> enabled
+        // giftCard_history_result01.png -> not yet enabled
+        const isNetUseEnabled = cardImgSrc.includes('finish');
+
         const balanceText = await (await (await page.$('#result_balance > .money'))!
             .getProperty('textContent')).jsonValue();
         const balanceResult = parseInt(balanceText.replace(/[,円]/g, ""));
@@ -109,7 +115,7 @@ export class VaViCrawler {
 
         // TODO: set year to date
 
-        return new CardUsageStats(balanceResult, details);
+        return new CardUsageStats(balanceResult, details, isNetUseEnabled);
     }
 
     /**

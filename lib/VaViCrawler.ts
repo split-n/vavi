@@ -82,6 +82,10 @@ export class VaViCrawler {
         return captchaAndSubmitFunc();
     }
 
+    async dispose(): Promise<void> {
+        await this.browser.close();
+    }
+
     /**
      * parse stats from loaded page.
      * @param page

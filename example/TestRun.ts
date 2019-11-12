@@ -40,6 +40,8 @@ async function main() {
             break;
         }
     }
+
+    await crawler.dispose();
 }
 
 main();

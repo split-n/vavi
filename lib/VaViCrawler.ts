@@ -74,7 +74,7 @@ export class VaViCrawler {
                     await page.waitForFunction(waitCaptchaImageFunc);
                     return captchaAndSubmitFunc();
                 } else {
-                    const result = this.parseStats(page);
+                    const result = await this.parseStats(page);
                     await page.close();
                     return result;
                 }

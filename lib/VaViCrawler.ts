@@ -134,15 +134,17 @@ export class VaViCrawler {
         // foreign use detail row in original price with exchange rate: <td class="childborder1 hidden detailsToggle">
         // only pick normal detail row (includes foreign use price in JPY).
         const detailRows = (await page.$$('#result_hisTable > table > tbody > tr:not(.hidden)'));
-        return await Promise.all(detailRows.map(async row => await this.parseRow(row)));
+        return (await Promise.all(detailRows.map(async row => await this.parseRow(row))))
+            .flatMap(r => r !== null ? [r] : []);
     }
 
     /**
      * parse detail row.
      * @param row
      */
-    private async parseRow(row: ElementHandle): Promise<CardUsageDetails> {
+    private async parseRow(row: ElementHandle): Promise<CardUsageDetails|null> {
         const cols = await row.$$('td');
+        if(cols.length==1) return null;
 
         const dateValue: string = await (await cols[0].getProperty('textContent')).jsonValue();
         const dateSplit = dateValue.split('/').map(s => parseInt(s));

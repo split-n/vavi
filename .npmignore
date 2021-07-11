@@ -1,0 +1,12 @@
+# editor
+/.idea/
+/.vscode/
+
+/node_modules/
+
+/example/
+/__tests__/
+/jest.config.js
+/lib/**/*.ts
+!/lib/**/*.d.ts
+/tsconfig.json

@@ -15,13 +15,21 @@ async function* getAsyncReadlineIter() : AsyncIterableIterator<string> {
 }
 
 async function main() {
-    const crawler = await vavi.launch({headless: false});
+    const browser = await vavi.VaViCrawlerBrowser.start({headless: false});
+    const crawler = await browser.newCrawler();
 
     const loginCardInfo: vavi.LoginCardInfo = {
         inquiryNumber2 : '', inquiryNumber3 : '', inquiryNumber4 : '', securityCode : ''
     };
 
     let captcha = await crawler.getCardUsageStats(loginCardInfo);
+
+    
+    /* test multiple crawlers */
+    const crawler2 = await browser.newCrawler();
+    let captcha2 = await crawler2.getCardUsageStats(loginCardInfo);
+    /* run on different context */
+
     const readlineIter = getAsyncReadlineIter();
     while(true) {
         process.stdout.write('captcha dataURL: ' + captcha.captchaImage + "\n");

@@ -8,14 +8,14 @@ import {CardUsageDetails, CardUsageStats} from "./CardUsageStats";
 export class VaViCrawler {
     private static readonly LOGIN_PATH = '/login.action';
     private readonly baseUrl: string;
-    private readonly browser: puppeteer.Browser;
+    private readonly browserContext: puppeteer.BrowserContext;
 
     /**
      * @param browser browser
      * @param baseUrl vanilla visa site protocol + host
      */
-    constructor(browser: puppeteer.Browser, baseUrl: string) {
-        this.browser = browser;
+    constructor(browserContext: puppeteer.BrowserContext, baseUrl: string) {
+        this.browserContext = browserContext;
         this.baseUrl = baseUrl;
     }
 
@@ -24,7 +24,7 @@ export class VaViCrawler {
      * @param loginCardInfo login information
      */
     async getCardUsageStats(loginCardInfo: LoginCardInfo): Promise<CaptchaInterruption> {
-        const page = await this.browser.newPage();
+        const page = await this.browserContext.newPage();
         await Promise.all([
             page.waitForNavigation(),
             page.goto(this.baseUrl + VaViCrawler.LOGIN_PATH)
@@ -84,8 +84,16 @@ export class VaViCrawler {
         return captchaAndSubmitFunc();
     }
 
+    async ensureContextClosed() {
+        try {
+            await this.browserContext.close();
+        } catch(err) {
+            // error if context not exist
+        }
+    }
+
     async dispose(): Promise<void> {
-        await this.browser.close();
+        await this.ensureContextClosed();
     }
 
     /**
